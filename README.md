@@ -1,4 +1,9 @@
+
+
 # 🛒 ShopSphere — Backend REST API
+⚠️ **Note:** The backend is hosted on Render's free tier.
+> If products take 30-50 seconds to load on first visit,
+> please wait — the server is waking up from sleep.
 
 > A production-grade, security-first REST API built with **Node.js + Express + MongoDB**, powering a full e-commerce platform with JWT authentication, multi-layer file upload security, and PayPal payment integration.
 
@@ -31,8 +36,11 @@
 
 This is the backend service for ShopSphere — a complete e-commerce platform. It exposes a RESTful API consumed by the React frontend, handling authentication, product management, order processing, PayPal payment verification, and file uploads with multi-layer security validation.
 
-**Live API:** `https://shopsphere-backend.onrender.com`
-**Frontend Repo:** `https://github.com/yourusername/shopsphere-frontend`
+**Live API:** `https://shop-backend-boik.onrender.com`
+**Frontend Repo:** `https://github.com/Tidjani1Bachir/shops-frontend`
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Visit_App-black?style=for-the-badge&logo=vercel)](https://shops-frontend.vercel.app)
+[![API](https://img.shields.io/badge/API-Render-46E3B7?style=for-the-badge&logo=render)](https://shop-backend-boik.onrender.com)
 
 ---
 
