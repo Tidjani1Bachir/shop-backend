@@ -2,12 +2,17 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
+
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../.env') });
+
 import Product from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
 import User from "../models/userModel.js";
-
-dotenv.config();
-
 // ============================================================
 // USERS
 // ============================================================

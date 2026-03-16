@@ -1,5 +1,5 @@
 {
-  "name": "shopsphere-backend",
+  "name": "shop-backend",
   "version": "1.0.0",
   "description": "ShopSphere E-Commerce REST API",
   "main": "index.js",
