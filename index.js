@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 // Import 'cookie-parser' middleware to parse cookies from incoming HTTP requests
 import cookieParser from "cookie-parser";
 
+import cors from "cors"; 
 // Import database connection function
 import connectDB from "./config/db.js";
 // Import user routes for user-related API endpoints
@@ -37,6 +38,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Middleware to parse cookies from incoming requests
 app.use(cookieParser());
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 
 // Register user routes with the /api/users endpoint
 app.use("/api/users", userRoutes);
