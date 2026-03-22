@@ -1,11 +1,9 @@
-
-
 # 🛒 ShopSphere — Backend REST API
 ⚠️ **Note:** The backend is hosted on Render's free tier.
 > If products take 30-50 seconds to load on first visit,
 > please wait — the server is waking up from sleep.
 
-> A production-grade, security-first REST API built with **Node.js + Express + MongoDB**, powering a full e-commerce platform with JWT authentication, multi-layer file upload security, and PayPal payment integration.
+> A production-grade, security-first REST API built with **Node.js + Express + MongoDB**, powering a full e-commerce platform with JWT authentication, multi-layer file upload security, NoSQL injection protection, and PayPal payment integration.
 
 <br/>
 
@@ -62,6 +60,10 @@ Layer 4: Virus Scanning              → ClamAV (clamdjs) stream scanning
 ```
 > A `.exe` renamed to `.jpg` passes the extension check but fails the MIME check. Both layers are required.
 
+### Input Sanitization
+- **express-mongo-sanitize** — Strips MongoDB operators (`$gt`, `$ne`, `$where`, etc.) from `req.body`, `req.params`, and `req.query` on every request, preventing NoSQL injection attacks
+- **Explicit type casting** — All controller inputs cast to correct types (`String()`, `Number()`) before hitting the database, ensuring operators injected as objects are neutralized even if sanitization is bypassed
+
 ### Attack Surface Reduction
 | Attack | Mitigation |
 |---|---|
@@ -69,6 +71,7 @@ Layer 4: Virus Scanning              → ClamAV (clamdjs) stream scanning
 | CSRF | `SameSite: "strict"` cookie policy |
 | Path Traversal | `sanitize-filename` + `path.basename()` |
 | Malware Upload | ClamAV stream scanner on every upload |
+| NoSQL Injection | `express-mongo-sanitize` + explicit type casting across all controllers |
 | Credential Exposure | PayPal Client ID served via endpoint, never hardcoded |
 
 ---
@@ -166,8 +169,8 @@ POST   /api/upload              → Upload product image (admin, multi-layer val
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/shopsphere-backend.git
-cd shopsphere-backend
+git clone https://github.com/Tidjani1Bachir/shop-backend.git
+cd shop-backend
 
 # Install dependencies
 npm install
@@ -252,12 +255,15 @@ MongoDB's flexible schema allowed new fields (like `favorites`) to be added to t
 ### Four-Layer File Upload Validation
 Each layer catches a different attack vector. Extensions are trivially fakeable. MIME types are harder to spoof. `sanitize-filename` prevents directory traversal. ClamAV catches known malware that passes all other checks. Defense in depth — no single check is sufficient.
 
+### NoSQL Injection Protection
+MongoDB queries accept JavaScript objects as input — meaning a hacker can send `{ "$gt": "" }` instead of a string to bypass authentication entirely. Two complementary defenses are applied: `express-mongo-sanitize` strips all MongoDB operators from incoming requests at the middleware level, and explicit type casting (`String()`, `Number()`) in every controller ensures that even if an operator slips through, it is converted to a harmless string before reaching the database.
+
 ---
 
 ## 🔗 Frontend Repo
 
 The React frontend that consumes this API:
-👉 [shopsphere-frontend](https://github.com/yourusername/shopsphere-frontend)
+👉 [shops-frontend](https://github.com/Tidjani1Bachir/shops-frontend)
 
 ---
 
