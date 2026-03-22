@@ -41,11 +41,15 @@ app.use(mongoSanitize())
 app.use(express.urlencoded({ extended: true }));
 // Middleware to parse cookies from incoming requests
 app.use(cookieParser());
-
+//root route because we are using React Router in the frontend, we need to serve the index.html for any route that doesn't match our API routes. This allows React Router to handle client-side routing properly.
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
+
+app.get('/', (req, res) => {
+  res.json({ message: 'API is running...' })
+})
 
 // Register user routes with the /api/users endpoint
 app.use("/api/users", userRoutes);
