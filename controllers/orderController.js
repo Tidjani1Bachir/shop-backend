@@ -36,13 +36,21 @@ const createOrder = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // ✅ Validate orderItems is a real array — prevents injection via malformed body
+  if (!Array.isArray(orderItems)) {
+    const error = new Error("Invalid order items");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // ✅ Cast each item's _id to string — prevents operator injection inside array
   const itemsFromDB = await Product.find({
-    _id: { $in: orderItems.map((x) => x._id) },
+    _id: { $in: orderItems.map((x) => String(x._id)) },
   });
 
   const dbOrderItems = orderItems.map((itemFromClient) => {
     const matchingItemFromDB = itemsFromDB.find(
-      (itemFromDB) => itemFromDB._id.toString() === itemFromClient._id
+      (itemFromDB) => itemFromDB._id.toString() === String(itemFromClient._id)
     );
 
     if (!matchingItemFromDB) {
@@ -53,11 +61,19 @@ const createOrder = asyncHandler(async (req, res) => {
 
     return {
       ...itemFromClient,
-      product: itemFromClient._id,
-      price: matchingItemFromDB.price,
+      product: String(itemFromClient._id), // ✅ force string
+      price: matchingItemFromDB.price,      // ✅ price always taken from DB — never trusted from client
       _id: undefined,
     };
   });
+
+  // ✅ Sanitize shippingAddress fields — cast each to string
+  const sanitizedShippingAddress = {
+    address: String(shippingAddress.address || ""),
+    city: String(shippingAddress.city || ""),
+    postalCode: String(shippingAddress.postalCode || ""),
+    country: String(shippingAddress.country || ""),
+  };
 
   const { itemsPrice, taxPrice, shippingPrice, totalPrice } =
     calcPrices(dbOrderItems);
@@ -65,8 +81,8 @@ const createOrder = asyncHandler(async (req, res) => {
   const order = new Order({
     orderItems: dbOrderItems,
     user: req.user._id,
-    shippingAddress,
-    paymentMethod,
+    shippingAddress: sanitizedShippingAddress, // ✅ sanitized version
+    paymentMethod: String(paymentMethod),       // ✅ force string
     itemsPrice,
     taxPrice,
     shippingPrice,
@@ -78,27 +94,32 @@ const createOrder = asyncHandler(async (req, res) => {
 });
 
 const getAllOrders = asyncHandler(async (req, res) => {
+  // ✅ No user input used — safe as is
   const orders = await Order.find({}).populate("user", "id username");
   res.json(orders);
 });
 
 const getUserOrders = asyncHandler(async (req, res) => {
+  // ✅ req.user._id comes from verified JWT — safe as is
   const orders = await Order.find({ user: req.user._id });
   res.json(orders);
 });
 
 const countTotalOrders = asyncHandler(async (req, res) => {
+  // ✅ No user input used — safe as is
   const totalOrders = await Order.countDocuments();
   res.json({ totalOrders });
 });
 
 const calculateTotalSales = asyncHandler(async (req, res) => {
+  // ✅ No user input used — safe as is
   const orders = await Order.find();
   const totalSales = orders.reduce((sum, order) => sum + parseFloat(order.totalPrice), 0);
   res.json({ totalSales });
 });
 
 const calcualteTotalSalesByDate = asyncHandler(async (req, res) => {
+  // ✅ No user input used — aggregation pipeline is safe as is
   const salesByDate = await Order.aggregate([
     {
       $match: {
@@ -110,7 +131,7 @@ const calcualteTotalSalesByDate = asyncHandler(async (req, res) => {
         _id: {
           $dateToString: { format: "%Y-%m-%d", date: "$paidAt" },
         },
-        totalSales: { $sum: { $toDouble: "$totalPrice" } }, // safer conversion
+        totalSales: { $sum: { $toDouble: "$totalPrice" } },
       },
     },
   ]);
@@ -119,6 +140,7 @@ const calcualteTotalSalesByDate = asyncHandler(async (req, res) => {
 });
 
 const findOrderById = asyncHandler(async (req, res) => {
+  // ✅ findById is safe — Mongoose validates ObjectId internally
   const order = await Order.findById(req.params.id).populate(
     "user",
     "username email"
@@ -134,6 +156,7 @@ const findOrderById = asyncHandler(async (req, res) => {
 });
 
 const markOrderAsPaid = asyncHandler(async (req, res) => {
+  // ✅ findById is safe — Mongoose validates ObjectId internally
   const order = await Order.findById(req.params.id);
 
   if (!order) {
@@ -144,11 +167,13 @@ const markOrderAsPaid = asyncHandler(async (req, res) => {
 
   order.isPaid = true;
   order.paidAt = Date.now();
+
+  // ✅ Cast each paymentResult field to string — prevents operator injection
   order.paymentResult = {
-    id: req.body.id,
-    status: req.body.status,
-    update_time: req.body.update_time,
-    email_address: req.body.payer?.email_address,
+    id: String(req.body.id || ""),
+    status: String(req.body.status || ""),
+    update_time: String(req.body.update_time || ""),
+    email_address: String(req.body.payer?.email_address || ""),
   };
 
   const updatedOrder = await order.save();
@@ -156,6 +181,7 @@ const markOrderAsPaid = asyncHandler(async (req, res) => {
 });
 
 const markOrderAsDelivered = asyncHandler(async (req, res) => {
+  // ✅ findById is safe — Mongoose validates ObjectId internally
   const order = await Order.findById(req.params.id);
 
   if (!order) {

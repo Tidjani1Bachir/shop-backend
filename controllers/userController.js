@@ -17,7 +17,7 @@ const createUser = asyncHandler(async (req, res) => {
     throw createError("Please fill all the inputs.", 400);
   }
 
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ email: String(req.body.email) });
   if (userExists) {
     throw createError("User already exists", 400);
   }
@@ -41,7 +41,7 @@ const createUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email: String(req.body.email) });
   if (!existingUser) {
     throw createError("Invalid email or password", 401);
   }

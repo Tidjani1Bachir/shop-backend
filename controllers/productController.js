@@ -15,8 +15,6 @@ const validateProductFields = (fields) => {
 // For UPDATE — only validate provided fields
 const validateProductForUpdate = (fields) => {
   const { name, description, price, category, quantity, brand } = fields;
-//"If the client sent a name field, but it’s empty or just whitespace, reject the request."
-//But if they didn’t send name at all, we skip this check entirely — which is perfect for partial updates!
   if (name !== undefined && !name.trim()) throw createError("Name cannot be empty", 400);
   if (brand !== undefined && !brand.trim()) throw createError("Brand cannot be empty", 400);
   if (description !== undefined && !description.trim()) throw createError("Description cannot be empty", 400);
@@ -39,7 +37,17 @@ const createError = (message, statusCode) => {
 const addProduct = asyncHandler(async (req, res) => {
   validateProductFields(req.fields);
 
-  const product = new Product({ ...req.fields });
+  // ✅ Explicitly cast each field to its correct type — prevents NoSQL injection
+  const { name, description, price, category, quantity, brand } = req.fields;
+  const product = new Product({
+    name: String(name),
+    description: String(description),
+    price: Number(price),
+    category: String(category),
+    quantity: Number(quantity),
+    brand: String(brand),
+  });
+
   await product.save();
   res.status(201).json(product);
 });
@@ -47,9 +55,19 @@ const addProduct = asyncHandler(async (req, res) => {
 const updateProductDetails = asyncHandler(async (req, res) => {
   validateProductForUpdate(req.fields);
 
+  // ✅ Only include fields that were actually sent — preserves partial update logic
+  const { name, description, price, category, quantity, brand } = req.fields;
+  const updateData = {};
+  if (name !== undefined)        updateData.name = String(name);
+  if (description !== undefined) updateData.description = String(description);
+  if (price !== undefined)       updateData.price = Number(price);
+  if (category !== undefined)    updateData.category = String(category);
+  if (quantity !== undefined)    updateData.quantity = Number(quantity);
+  if (brand !== undefined)       updateData.brand = String(brand);
+
   const product = await Product.findByIdAndUpdate(
     req.params.id,
-    { ...req.fields },
+    updateData,
     { new: true, runValidators: true }
   );
 
@@ -61,6 +79,7 @@ const updateProductDetails = asyncHandler(async (req, res) => {
 });
 
 const removeProduct = asyncHandler(async (req, res) => {
+  // ✅ findByIdAndDelete is safe — Mongoose validates ObjectId internally
   const product = await Product.findByIdAndDelete(req.params.id);
   if (!product) {
     throw createError("Product not found", 404);
@@ -71,8 +90,9 @@ const removeProduct = asyncHandler(async (req, res) => {
 const fetchProducts = asyncHandler(async (req, res) => {
   const pageSize = 6;
 
+  // ✅ Force keyword to string — prevents operator injection via query string
   const keyword = req.query.keyword
-    ? { name: { $regex: req.query.keyword, $options: "i" } }
+    ? { name: { $regex: String(req.query.keyword), $options: "i" } }
     : {};
 
   const count = await Product.countDocuments({ ...keyword });
@@ -87,6 +107,7 @@ const fetchProducts = asyncHandler(async (req, res) => {
 });
 
 const fetchProductById = asyncHandler(async (req, res) => {
+  // ✅ findById is safe — Mongoose validates ObjectId internally
   const product = await Product.findById(req.params.id);
   if (!product) {
     throw createError("Product not found", 404);
@@ -95,18 +116,25 @@ const fetchProductById = asyncHandler(async (req, res) => {
 });
 
 const fetchAllProducts = asyncHandler(async (req, res) => {
+  // ✅ No user input used — safe as is
   const products = await Product.find({})
     .populate("category")
     .limit(12)
-    .sort({ createdAt: -1 }); // ✅ Fixed typo: "createAt" → "createdAt"
+    .sort({ createdAt: -1 });
 
   res.json(products);
 });
 
 const addProductReview = asyncHandler(async (req, res) => {
-  const { rating, comment } = req.body;
-  const product = await Product.findById(req.params.id);
+  // ✅ Explicitly cast rating to Number and comment to String — prevents injection
+  const rating = Number(req.body.rating);
+  const comment = String(req.body.comment);
 
+  if (isNaN(rating) || rating < 1 || rating > 5) {
+    throw createError("Rating must be a number between 1 and 5", 400);
+  }
+
+  const product = await Product.findById(req.params.id);
   if (!product) {
     throw createError("Product not found", 404);
   }
@@ -121,7 +149,7 @@ const addProductReview = asyncHandler(async (req, res) => {
 
   const review = {
     name: req.user.username,
-    rating: Number(rating),
+    rating,
     comment,
     user: req.user._id,
   };
@@ -137,22 +165,29 @@ const addProductReview = asyncHandler(async (req, res) => {
 });
 
 const fetchTopProducts = asyncHandler(async (req, res) => {
+  // ✅ No user input used — safe as is
   const products = await Product.find({}).sort({ rating: -1 }).limit(4);
   res.json(products);
 });
 
 const fetchNewProducts = asyncHandler(async (req, res) => {
+  // ✅ No user input used — safe as is
   const products = await Product.find().sort({ _id: -1 }).limit(5);
   res.json(products);
 });
 
 const filterProducts = asyncHandler(async (req, res) => {
-  const { checked = [], radio = [] } = req.body;
+  // ✅ Validate arrays and cast each item to correct type — prevents operator injection
+  const checked = Array.isArray(req.body.checked)
+    ? req.body.checked.map((id) => String(id))
+    : [];
+
+  const radio = Array.isArray(req.body.radio)
+    ? req.body.radio.map((val) => Number(val))
+    : [];
 
   let args = {};
-  // If the user didn't select anything, args remains {} and it returns all products.
   if (checked.length > 0) args.category = { $in: checked };
-  //"$in" query. It says: "Find products where the category is ID1 OR ID2."
   if (radio.length === 2) args.price = { $gte: radio[0], $lte: radio[1] };
 
   const products = await Product.find(args);

@@ -34,6 +34,8 @@ const app = express();
 
 // Middleware to parse incoming JSON request bodies
 app.use(express.json());
+ //sanitizes req.body, req.params, and req.query by removing MongoDB operators (e.g. $gt, $ne) to prevent NoSQL injection attacks
+app.use(mongoSanitize())
 // Middleware to parse URL-encoded request bodies (form data)
 app.use(express.urlencoded({ extended: true }));
 // Middleware to parse cookies from incoming requests
