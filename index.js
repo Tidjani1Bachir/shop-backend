@@ -6,7 +6,8 @@ import express from "express";
 import dotenv from "dotenv";
 // Import 'cookie-parser' middleware to parse cookies from incoming HTTP requests
 import cookieParser from "cookie-parser";
-
+// removes MongoDB operators ($gt, $ne, etc.) from req.body, req.params, and req.query to prevent NoSQL injection attacks
+import mongoSanitize from 'express-mongo-sanitize'
 import cors from "cors"; 
 // Import database connection function
 import connectDB from "./config/db.js";
