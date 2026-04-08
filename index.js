@@ -61,7 +61,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/upload", uploadRoutes);
 // Register order routes with the /api/orders endpoint
 app.use("/api/orders", orderRoutes);
-
+// to fix slow initial response times on platforms like Render, we add a simple health check endpoint that responds with a 200 status code. This keeps the backend "awake" and responsive for incoming requests from the frontend.
+app.use("/api/health", (req, res) => res.status(200).json({ status: "ok" }));
 // API endpoint to serve PayPal client ID for frontend integration
 app.get("/api/config/paypal", (req, res) => {
   // Send the PayPal client ID from environment variables to the client
